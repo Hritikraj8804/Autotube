@@ -11,8 +11,8 @@ services:
     environment:
       # Basic Auth - DISABLED for initial setup
       # - N8N_BASIC_AUTH_ACTIVE=true
-      # - N8N_BASIC_AUTH_USER=redroy9525@gmail.com
-      # - N8N_BASIC_AUTH_PASSWORD=8804895628@Hr
+      # - N8N_BASIC_AUTH_USER=rrrrrrrr@gmail.com
+      # - N8N_BASIC_AUTH_PASSWORD=rrrrrrrrrr
 
       # Enable all features
       - N8N_PROTOCOL=http
