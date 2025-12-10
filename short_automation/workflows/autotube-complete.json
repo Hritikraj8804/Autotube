@@ -1,0 +1,297 @@
+{
+    "name": "AutoTube - Complete Pipeline",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "manual-trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "topic",
+                            "value": "5 AI tools that will change your life in 2025"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "set-topic",
+            "name": "Set Topic",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                280,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://ollama:11434/api/generate",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"model\": \"tinyllama\",\n  \"prompt\": \"You are a viral YouTube Shorts script writer. Create an engaging 30-second script about: {{ $json.topic }}\\n\\nFormat your response EXACTLY like this:\\n\\nHOOK (0-3 seconds):\\n[Write an attention-grabbing question or shocking fact]\\n\\nCONTENT (3-25 seconds):\\n[Write 3-4 key points]\\n\\nCTA (25-30 seconds):\\n[Write call to action + hashtags]\\n\\nTITLE:\\n[Write a catchy YouTube title under 60 characters]\\n\\nDESCRIPTION:\\n[Write a short description with hashtags]\",\n  \"stream\": false\n}",
+                "options": {
+                    "timeout": 180000
+                }
+            },
+            "id": "ai-script-writer",
+            "name": "AI Script Writer",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse AI response\nconst response = $input.first().json.response || '';\n\n// Extract sections using regex\nconst hookMatch = response.match(/HOOK[^:]*:\\s*([\\s\\S]*?)(?=CONTENT|$)/i);\nconst contentMatch = response.match(/CONTENT[^:]*:\\s*([\\s\\S]*?)(?=CTA|$)/i);\nconst ctaMatch = response.match(/CTA[^:]*:\\s*([\\s\\S]*?)(?=TITLE|$)/i);\nconst titleMatch = response.match(/TITLE[^:]*:\\s*([\\s\\S]*?)(?=DESCRIPTION|$)/i);\nconst descMatch = response.match(/DESCRIPTION[^:]*:\\s*([\\s\\S]*?)$/i);\n\n// Clean up extracted text\nconst cleanText = (text) => text ? text.trim().replace(/\\[.*?\\]/g, '').trim() : '';\n\nconst hook = hookMatch ? cleanText(hookMatch[1]) : 'Did you know this?';\nconst content = contentMatch ? cleanText(contentMatch[1]) : response.substring(0, 200);\nconst cta = ctaMatch ? cleanText(ctaMatch[1]) : 'Follow for more!';\nlet title = titleMatch ? cleanText(titleMatch[1]) : $('Set Topic').first().json.topic.substring(0, 50);\nlet description = descMatch ? cleanText(descMatch[1]) : `${title} #shorts #viral #trending`;\n\n// Ensure title is YouTube Shorts friendly\nif (!title.includes('#shorts')) {\n  title = title.substring(0, 90) + ' #shorts';\n}\n\n// Add hashtags to description\nif (!description.includes('#shorts')) {\n  description = description + '\\n\\n#shorts #viral #trending #ai #automation';\n}\n\n// Create full script for TTS\nconst fullScript = `${hook}\\n\\n${content}\\n\\n${cta}`;\n\nreturn [{\n  json: {\n    topic: $('Set Topic').first().json.topic,\n    hook: hook,\n    content: content,\n    cta: cta,\n    title: title.substring(0, 100),\n    description: description.substring(0, 500),\n    fullScript: fullScript,\n    rawResponse: response,\n    tags: ['shorts', 'viral', 'trending', 'ai', 'automation', '2025']\n  }\n}];"
+            },
+            "id": "parse-script",
+            "name": "Parse Script",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                640,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "=http://tts:5500/api/tts?voice=coqui-tts:en_ljspeech&text={{ encodeURIComponent($json.fullScript) }}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "file"
+                        }
+                    },
+                    "timeout": 120000
+                }
+            },
+            "id": "text-to-speech",
+            "name": "Text to Speech",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                820,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "write",
+                "fileName": "=/videos/audio_{{ $now.format('yyyyMMdd_HHmmss') }}.wav",
+                "dataPropertyName": "data"
+            },
+            "id": "save-audio",
+            "name": "Save Audio File",
+            "type": "n8n-nodes-base.readWriteFile",
+            "typeVersion": 1,
+            "position": [
+                1000,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "=✅ Script Generated & Audio Created!\n\n📝 Topic: {{ $('Set Topic').first().json.topic }}\n\n🎬 Title: {{ $('Parse Script').first().json.title }}\n\n📖 Hook: {{ $('Parse Script').first().json.hook }}\n\n🔊 Audio saved to: {{ $json.fileName }}"
+                        },
+                        {
+                            "name": "videoTitle",
+                            "value": "={{ $('Parse Script').first().json.title }}"
+                        },
+                        {
+                            "name": "videoDescription",
+                            "value": "={{ $('Parse Script').first().json.description }}"
+                        },
+                        {
+                            "name": "audioFile",
+                            "value": "={{ $json.fileName }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "prepare-upload",
+            "name": "Prepare for Upload",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1180,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "video",
+                "title": "={{ $json.videoTitle }}",
+                "categoryId": "28",
+                "options": {
+                    "description": "={{ $json.videoDescription }}",
+                    "privacyStatus": "private",
+                    "tags": "shorts,viral,trending,ai,automation,2025"
+                }
+            },
+            "id": "youtube-upload",
+            "name": "Upload to YouTube",
+            "type": "n8n-nodes-base.youTube",
+            "typeVersion": 1,
+            "position": [
+                1360,
+                300
+            ],
+            "disabled": true,
+            "notesInFlow": true,
+            "notes": "Enable this node after:\n1. Creating video file\n2. Configuring YouTube OAuth credentials"
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "finalStatus",
+                            "value": "=🎉 AutoTube Pipeline Complete!\n\n📝 Title: {{ $('Parse Script').first().json.title }}\n📄 Description ready\n🔊 Audio generated\n\n⚠️ YouTube upload is DISABLED\nTo enable:\n1. Configure Google OAuth in n8n credentials\n2. Create video from audio using create_video.py\n3. Enable the 'Upload to YouTube' node"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "final-output",
+            "name": "Final Output",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1540,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Set Topic",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set Topic": {
+            "main": [
+                [
+                    {
+                        "node": "AI Script Writer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Script Writer": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Script",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Script": {
+            "main": [
+                [
+                    {
+                        "node": "Text to Speech",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Text to Speech": {
+            "main": [
+                [
+                    {
+                        "node": "Save Audio File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save Audio File": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare for Upload",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare for Upload": {
+            "main": [
+                [
+                    {
+                        "node": "Upload to YouTube",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Upload to YouTube": {
+            "main": [
+                [
+                    {
+                        "node": "Final Output",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [
+        {
+            "name": "AutoTube"
+        },
+        {
+            "name": "Production"
+        }
+    ],
+    "triggerCount": 0,
+    "versionId": "3"
+}
