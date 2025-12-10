@@ -1,0 +1,73 @@
+# ===================================
+# Environment & Secrets
+# ===================================
+.env
+.env.*
+*.env
+!.env.example
+
+# Google OAuth / API credentials
+client_secret*.json
+credentials.json
+token.json
+
+# ===================================
+# Docker Data Volumes
+# ===================================
+short_automation/data/
+short_automation/filebrowser.db
+
+# ===================================
+# Generated Media Files
+# ===================================
+short_automation/videos/*.mp4
+short_automation/videos/*.wav
+short_automation/videos/*.mp3
+short_automation/music/*.mp3
+short_automation/music/*.wav
+short_automation/pictures/*.png
+short_automation/pictures/*.jpg
+short_automation/pictures/*.jpeg
+
+# ===================================
+# Local Test & Status Files
+# ===================================
+short_automation/TEST_RESULTS.md
+
+# ===================================
+# OS Generated Files
+# ===================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ===================================
+# IDE / Editor Files
+# ===================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# ===================================
+# Logs
+# ===================================
+*.log
+logs/
+npm-debug.log*
+
+# ===================================
+# Temporary Files
+# ===================================
+*.tmp
+*.temp
+tmp/
+temp/

@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # 1. n8n with ALL community nodes pre-installed
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: youtube-automation
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Basic Auth - DISABLED for initial setup
+      # - N8N_BASIC_AUTH_ACTIVE=true
+      # - N8N_BASIC_AUTH_USER=redroy9525@gmail.com
+      # - N8N_BASIC_AUTH_PASSWORD=8804895628@Hr
+
+      # Enable all features
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+
+      # Community nodes & packages
+      - N8N_COMMUNITY_PACKAGES_ENABLED=true
+
+      # Database
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+
+      # Encryption
+      - N8N_ENCRYPTION_KEY=super-secret-key-change-me-123
+
+      # Execution settings
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+
+      # Timezone (India)
+      - GENERIC_TIMEZONE=Asia/Kolkata
+
+    volumes:
+      # Data persistence
+      - ./data/n8n:/home/node/.n8n
+
+      # Your files
+      - ./videos:/videos
+      - ./scripts:/scripts
+      - ./templates:/templates
+      - ./assets:/assets
+
+    networks:
+      - automation-network
+
+  # 2. Ollama AI
+  ollama:
+    image: ollama/ollama:latest
+    container_name: youtube-ai
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./data/ollama:/root/.ollama
+    networks:
+      - automation-network
+
+  # 3. TTS Server (Text-to-Speech)
+  tts:
+    image: synesthesiam/opentts:latest
+    container_name: youtube-tts
+    restart: unless-stopped
+    ports:
+      - "5500:5500"
+    volumes:
+      - ./data/tts:/root/.local/share/opentts
+    networks:
+      - automation-network
+
+  # 4. Python for Automation Scripts
+  python:
+    image: python:3.11-slim
+    container_name: youtube-python
+    restart: unless-stopped
+    working_dir: /scripts
+    volumes:
+      - ./scripts:/scripts
+      - ./videos:/videos
+    networks:
+      - automation-network
+    command: [ "sleep", "infinity" ]
+
+  # 5. PostgreSQL for n8n
+  postgres:
+    image: postgres:15-alpine
+    container_name: youtube-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=n8n_password
+      - POSTGRES_DB=n8n
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - automation-network
+
+  # 6. Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: youtube-cache
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - automation-network
+
+  # 7. File Browser
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: youtube-files
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/srv
+    networks:
+      - automation-network
+
+networks:
+  automation-network:
+    driver: bridge
