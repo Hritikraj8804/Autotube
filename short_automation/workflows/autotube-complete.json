@@ -36,7 +36,9 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://ollama:11434/api/generate",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
                 "sendHeaders": true,
                 "headerParameters": {
                     "parameters": [
@@ -48,9 +50,15 @@
                 },
                 "sendBody": true,
                 "specifyBody": "json",
-                "jsonBody": "={\n  \"model\": \"tinyllama\",\n  \"prompt\": \"You are a viral YouTube Shorts script writer. Create an engaging 30-second script about: {{ $json.topic }}\\n\\nFormat your response EXACTLY like this:\\n\\nHOOK (0-3 seconds):\\n[Write an attention-grabbing question or shocking fact]\\n\\nCONTENT (3-25 seconds):\\n[Write 3-4 key points]\\n\\nCTA (25-30 seconds):\\n[Write call to action + hashtags]\\n\\nTITLE:\\n[Write a catchy YouTube title under 60 characters]\\n\\nDESCRIPTION:\\n[Write a short description with hashtags]\",\n  \"stream\": false\n}",
+                "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a viral YouTube Shorts script writer. You create engaging, punchy 30-second scripts that hook viewers instantly.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Create an engaging 30-second script about: {{ $json.topic }}\\n\\nFormat your response EXACTLY like this:\\n\\nHOOK (0-3 seconds):\\n[Write an attention-grabbing question or shocking fact]\\n\\nCONTENT (3-25 seconds):\\n[Write 3-4 key points]\\n\\nCTA (25-30 seconds):\\n[Write call to action + hashtags]\\n\\nTITLE:\\n[Write a catchy YouTube title under 60 characters]\\n\\nDESCRIPTION:\\n[Write a short description with hashtags]\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 1024\n}",
                 "options": {
-                    "timeout": 180000
+                    "timeout": 30000
+                }
+            },
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "groq-api",
+                    "name": "Groq API"
                 }
             },
             "id": "ai-script-writer",
@@ -64,7 +72,7 @@
         },
         {
             "parameters": {
-                "jsCode": "// Parse AI response\nconst response = $input.first().json.response || '';\n\n// Extract sections using regex\nconst hookMatch = response.match(/HOOK[^:]*:\\s*([\\s\\S]*?)(?=CONTENT|$)/i);\nconst contentMatch = response.match(/CONTENT[^:]*:\\s*([\\s\\S]*?)(?=CTA|$)/i);\nconst ctaMatch = response.match(/CTA[^:]*:\\s*([\\s\\S]*?)(?=TITLE|$)/i);\nconst titleMatch = response.match(/TITLE[^:]*:\\s*([\\s\\S]*?)(?=DESCRIPTION|$)/i);\nconst descMatch = response.match(/DESCRIPTION[^:]*:\\s*([\\s\\S]*?)$/i);\n\n// Clean up extracted text\nconst cleanText = (text) => text ? text.trim().replace(/\\[.*?\\]/g, '').trim() : '';\n\nconst hook = hookMatch ? cleanText(hookMatch[1]) : 'Did you know this?';\nconst content = contentMatch ? cleanText(contentMatch[1]) : response.substring(0, 200);\nconst cta = ctaMatch ? cleanText(ctaMatch[1]) : 'Follow for more!';\nlet title = titleMatch ? cleanText(titleMatch[1]) : $('Set Topic').first().json.topic.substring(0, 50);\nlet description = descMatch ? cleanText(descMatch[1]) : `${title} #shorts #viral #trending`;\n\n// Ensure title is YouTube Shorts friendly\nif (!title.includes('#shorts')) {\n  title = title.substring(0, 90) + ' #shorts';\n}\n\n// Add hashtags to description\nif (!description.includes('#shorts')) {\n  description = description + '\\n\\n#shorts #viral #trending #ai #automation';\n}\n\n// Create full script for TTS\nconst fullScript = `${hook}\\n\\n${content}\\n\\n${cta}`;\n\nreturn [{\n  json: {\n    topic: $('Set Topic').first().json.topic,\n    hook: hook,\n    content: content,\n    cta: cta,\n    title: title.substring(0, 100),\n    description: description.substring(0, 500),\n    fullScript: fullScript,\n    rawResponse: response,\n    tags: ['shorts', 'viral', 'trending', 'ai', 'automation', '2025']\n  }\n}];"
+                "jsCode": "// Parse AI response from Groq (OpenAI format)\nconst choices = $input.first().json.choices;\nconst response = choices && choices[0] && choices[0].message ? choices[0].message.content : '';\n\n// Extract sections using regex\nconst hookMatch = response.match(/HOOK[^:]*:\\s*([\\s\\S]*?)(?=CONTENT|$)/i);\nconst contentMatch = response.match(/CONTENT[^:]*:\\s*([\\s\\S]*?)(?=CTA|$)/i);\nconst ctaMatch = response.match(/CTA[^:]*:\\s*([\\s\\S]*?)(?=TITLE|$)/i);\nconst titleMatch = response.match(/TITLE[^:]*:\\s*([\\s\\S]*?)(?=DESCRIPTION|$)/i);\nconst descMatch = response.match(/DESCRIPTION[^:]*:\\s*([\\s\\S]*?)$/i);\n\n// Clean up extracted text\nconst cleanText = (text) => text ? text.trim().replace(/\\[.*?\\]/g, '').trim() : '';\n\nconst hook = hookMatch ? cleanText(hookMatch[1]) : 'Did you know this?';\nconst content = contentMatch ? cleanText(contentMatch[1]) : response.substring(0, 200);\nconst cta = ctaMatch ? cleanText(ctaMatch[1]) : 'Follow for more!';\nlet title = titleMatch ? cleanText(titleMatch[1]) : $('Set Topic').first().json.topic.substring(0, 50);\nlet description = descMatch ? cleanText(descMatch[1]) : `${title} #shorts #viral #trending`;\n\n// Ensure title is YouTube Shorts friendly\nif (!title.includes('#shorts')) {\n  title = title.substring(0, 90) + ' #shorts';\n}\n\n// Add hashtags to description\nif (!description.includes('#shorts')) {\n  description = description + '\\n\\n#shorts #viral #trending #ai #automation';\n}\n\n// Create full script for TTS\nconst fullScript = `${hook}\\n\\n${content}\\n\\n${cta}`;\n\nreturn [{\n  json: {\n    topic: $('Set Topic').first().json.topic,\n    hook: hook,\n    content: content,\n    cta: cta,\n    title: title.substring(0, 100),\n    description: description.substring(0, 500),\n    fullScript: fullScript,\n    rawResponse: response,\n    tags: ['shorts', 'viral', 'trending', 'ai', 'automation', '2025']\n  }\n}];"
             },
             "id": "parse-script",
             "name": "Parse Script",
@@ -77,8 +85,22 @@
         },
         {
             "parameters": {
-                "method": "GET",
-                "url": "=http://tts:5500/api/tts?voice=coqui-tts:en_ljspeech&text={{ encodeURIComponent($json.fullScript) }}",
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/audio/speech",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"model\": \"playai-tts\",\n  \"input\": {{ JSON.stringify($json.fullScript) }},\n  \"voice\": \"Fritz-PlayAI\",\n  \"response_format\": \"wav\"\n}",
                 "options": {
                     "response": {
                         "response": {
@@ -86,6 +108,12 @@
                         }
                     },
                     "timeout": 120000
+                }
+            },
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "groq-api",
+                    "name": "Groq API"
                 }
             },
             "id": "text-to-speech",
@@ -174,7 +202,7 @@
                     "string": [
                         {
                             "name": "finalStatus",
-                            "value": "=🎉 AutoTube Pipeline Complete!\n\n📝 Title: {{ $('Parse Script').first().json.title }}\n📄 Description ready\n🔊 Audio generated\n\n⚠️ YouTube upload is DISABLED\nTo enable:\n1. Configure Google OAuth in n8n credentials\n2. Create video from audio using create_video.py\n3. Enable the 'Upload to YouTube' node"
+                            "value": "=🎉 AutoTube Pipeline Complete!\n\n📝 Title: {{ $('Parse Script').first().json.title }}\n📄 Description ready\n🔊 Audio generated via Groq PlayAI TTS\n\n⚠️ YouTube upload is DISABLED\nTo enable:\n1. Configure Google OAuth in n8n credentials\n2. Create video from audio using create_video.py\n3. Enable the 'Upload to YouTube' node"
                         }
                     ]
                 },
@@ -293,5 +321,5 @@
         }
     ],
     "triggerCount": 0,
-    "versionId": "3"
+    "versionId": "5"
 }
