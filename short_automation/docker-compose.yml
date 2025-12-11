@@ -9,10 +9,10 @@ services:
     ports:
       - "5678:5678"
     environment:
-      # Basic Auth - DISABLED for initial setup
-      # - N8N_BASIC_AUTH_ACTIVE=true
-      # - N8N_BASIC_AUTH_USER=rrrrrrrr@gmail.com
-      # - N8N_BASIC_AUTH_PASSWORD=rrrrrrrrrr
+      # Basic Auth - Enable and configure via .env file
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-false}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
 
       # Enable all features
       - N8N_PROTOCOL=http
@@ -28,7 +28,7 @@ services:
       - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
 
       # Encryption
-      - N8N_ENCRYPTION_KEY=super-secret-key-change-me-123
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-change-me-in-env-file}
 
       # Execution settings
       - EXECUTIONS_DATA_PRUNE=true
@@ -93,9 +93,9 @@ services:
     container_name: youtube-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=n8n
-      - POSTGRES_PASSWORD=n8n_password
-      - POSTGRES_DB=n8n
+      - POSTGRES_USER=${POSTGRES_USER:-n8n}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-n8n_password}
+      - POSTGRES_DB=${POSTGRES_DB:-n8n}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     networks:
