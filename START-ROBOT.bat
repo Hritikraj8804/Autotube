@@ -7,7 +7,7 @@ echo.
 echo ✅ ALL SERVICES STARTED:
 echo.
 echo 🌐 n8n Dashboard:    http://localhost:5678
-echo 👤 Login: redroy9525@gmail.com / 8804895628@Hr
+echo 👤 Login: Configure credentials in .env file or n8n UI
 echo.
 echo 🧠 AI Server:        http://localhost:11434
 echo 🔊 TTS Server:       http://localhost:5500

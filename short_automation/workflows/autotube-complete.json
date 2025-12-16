@@ -1,5 +1,5 @@
 {
-    "name": "AutoTube - Complete Pipeline",
+    "name": "AutoTube - Complete Pipeline with Video",
     "nodes": [
         {
             "parameters": {},
@@ -72,7 +72,7 @@
         },
         {
             "parameters": {
-                "jsCode": "// Parse AI response from Groq (OpenAI format)\nconst choices = $input.first().json.choices;\nconst response = choices && choices[0] && choices[0].message ? choices[0].message.content : '';\n\n// Extract sections using regex\nconst hookMatch = response.match(/HOOK[^:]*:\\s*([\\s\\S]*?)(?=CONTENT|$)/i);\nconst contentMatch = response.match(/CONTENT[^:]*:\\s*([\\s\\S]*?)(?=CTA|$)/i);\nconst ctaMatch = response.match(/CTA[^:]*:\\s*([\\s\\S]*?)(?=TITLE|$)/i);\nconst titleMatch = response.match(/TITLE[^:]*:\\s*([\\s\\S]*?)(?=DESCRIPTION|$)/i);\nconst descMatch = response.match(/DESCRIPTION[^:]*:\\s*([\\s\\S]*?)$/i);\n\n// Clean up extracted text\nconst cleanText = (text) => text ? text.trim().replace(/\\[.*?\\]/g, '').trim() : '';\n\nconst hook = hookMatch ? cleanText(hookMatch[1]) : 'Did you know this?';\nconst content = contentMatch ? cleanText(contentMatch[1]) : response.substring(0, 200);\nconst cta = ctaMatch ? cleanText(ctaMatch[1]) : 'Follow for more!';\nlet title = titleMatch ? cleanText(titleMatch[1]) : $('Set Topic').first().json.topic.substring(0, 50);\nlet description = descMatch ? cleanText(descMatch[1]) : `${title} #shorts #viral #trending`;\n\n// Ensure title is YouTube Shorts friendly\nif (!title.includes('#shorts')) {\n  title = title.substring(0, 90) + ' #shorts';\n}\n\n// Add hashtags to description\nif (!description.includes('#shorts')) {\n  description = description + '\\n\\n#shorts #viral #trending #ai #automation';\n}\n\n// Create full script for TTS\nconst fullScript = `${hook}\\n\\n${content}\\n\\n${cta}`;\n\nreturn [{\n  json: {\n    topic: $('Set Topic').first().json.topic,\n    hook: hook,\n    content: content,\n    cta: cta,\n    title: title.substring(0, 100),\n    description: description.substring(0, 500),\n    fullScript: fullScript,\n    rawResponse: response,\n    tags: ['shorts', 'viral', 'trending', 'ai', 'automation', '2025']\n  }\n}];"
+                "jsCode": "const choices = $input.first().json.choices;\nconst response = choices && choices[0] && choices[0].message ? choices[0].message.content : '';\n\nconst hookMatch = response.match(/HOOK[^:]*:\\s*([\\s\\S]*?)(?=CONTENT|$)/i);\nconst contentMatch = response.match(/CONTENT[^:]*:\\s*([\\s\\S]*?)(?=CTA|$)/i);\nconst ctaMatch = response.match(/CTA[^:]*:\\s*([\\s\\S]*?)(?=TITLE|$)/i);\nconst titleMatch = response.match(/TITLE[^:]*:\\s*([\\s\\S]*?)(?=DESCRIPTION|$)/i);\nconst descMatch = response.match(/DESCRIPTION[^:]*:\\s*([\\s\\S]*?)$/i);\n\nconst cleanText = (text) => text ? text.trim().replace(/\\[.*?\\]/g, '').trim() : '';\n\nconst hook = hookMatch ? cleanText(hookMatch[1]) : 'Did you know this?';\nconst content = contentMatch ? cleanText(contentMatch[1]) : response.substring(0, 200);\nconst cta = ctaMatch ? cleanText(ctaMatch[1]) : 'Follow for more!';\nlet title = titleMatch ? cleanText(titleMatch[1]) : $('Set Topic').first().json.topic.substring(0, 50);\nlet description = descMatch ? cleanText(descMatch[1]) : `${title} #shorts #viral #trending`;\n\nif (!title.includes('#shorts')) {\n  title = title.substring(0, 90) + ' #shorts';\n}\n\nif (!description.includes('#shorts')) {\n  description = description + '\\n\\n#shorts #viral #trending #ai #automation';\n}\n\nconst fullScript = `${hook}\\n\\n${content}\\n\\n${cta}`;\n\nreturn [{\n  json: {\n    topic: $('Set Topic').first().json.topic,\n    hook: hook,\n    content: content,\n    cta: cta,\n    title: title.substring(0, 100),\n    description: description.substring(0, 500),\n    fullScript: fullScript,\n    rawResponse: response,\n    tags: ['shorts', 'viral', 'trending', 'ai', 'automation', '2025']\n  }\n}];"
             },
             "id": "parse-script",
             "name": "Parse Script",
@@ -142,11 +142,44 @@
         },
         {
             "parameters": {
+                "method": "POST",
+                "url": "http://python:5001/generate",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"hook\": {{ JSON.stringify($('Parse Script').first().json.hook) }},\n  \"content\": {{ JSON.stringify($('Parse Script').first().json.content) }},\n  \"cta\": {{ JSON.stringify($('Parse Script').first().json.cta) }},\n  \"title\": {{ JSON.stringify($('Parse Script').first().json.title) }},\n  \"audioPath\": {{ JSON.stringify($('Save Audio File').first().json.fileName) }},\n  \"outputPath\": \"/videos/short_{{ $now.format('yyyyMMdd_HHmmss') }}.mp4\",\n  \"useAiImages\": true\n}",
+                "options": {
+                    "timeout": 300000
+                }
+            },
+            "id": "generate-video",
+            "name": "Generate Video",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1180,
+                300
+            ]
+        },
+        {
+            "parameters": {
                 "values": {
                     "string": [
                         {
                             "name": "status",
-                            "value": "=✅ Script Generated & Audio Created!\n\n📝 Topic: {{ $('Set Topic').first().json.topic }}\n\n🎬 Title: {{ $('Parse Script').first().json.title }}\n\n📖 Hook: {{ $('Parse Script').first().json.hook }}\n\n🔊 Audio saved to: {{ $json.fileName }}"
+                            "value": "=✅ Video Created Successfully!\\n\\n📝 Topic: {{ $('Set Topic').first().json.topic }}\\n🎬 Title: {{ $('Parse Script').first().json.title }}\\n🎥 Video: {{ $json.videoPath }}\\n📦 Size: {{ Math.round($json.fileSize / 1024 / 1024 * 100) / 100 }} MB\\n🔊 Audio: {{ $('Save Audio File').first().json.fileName }}"
+                        },
+                        {
+                            "name": "videoFile",
+                            "value": "={{ $json.videoPath }}"
                         },
                         {
                             "name": "videoTitle",
@@ -155,65 +188,17 @@
                         {
                             "name": "videoDescription",
                             "value": "={{ $('Parse Script').first().json.description }}"
-                        },
-                        {
-                            "name": "audioFile",
-                            "value": "={{ $json.fileName }}"
                         }
                     ]
                 },
                 "options": {}
             },
             "id": "prepare-upload",
-            "name": "Prepare for Upload",
-            "type": "n8n-nodes-base.set",
-            "typeVersion": 3.4,
-            "position": [
-                1180,
-                300
-            ]
-        },
-        {
-            "parameters": {
-                "resource": "video",
-                "title": "={{ $json.videoTitle }}",
-                "categoryId": "28",
-                "options": {
-                    "description": "={{ $json.videoDescription }}",
-                    "privacyStatus": "private",
-                    "tags": "shorts,viral,trending,ai,automation,2025"
-                }
-            },
-            "id": "youtube-upload",
-            "name": "Upload to YouTube",
-            "type": "n8n-nodes-base.youTube",
-            "typeVersion": 1,
-            "position": [
-                1360,
-                300
-            ],
-            "disabled": true,
-            "notesInFlow": true,
-            "notes": "Enable this node after:\n1. Creating video file\n2. Configuring YouTube OAuth credentials"
-        },
-        {
-            "parameters": {
-                "values": {
-                    "string": [
-                        {
-                            "name": "finalStatus",
-                            "value": "=🎉 AutoTube Pipeline Complete!\n\n📝 Title: {{ $('Parse Script').first().json.title }}\n📄 Description ready\n🔊 Audio generated via Groq PlayAI TTS\n\n⚠️ YouTube upload is DISABLED\nTo enable:\n1. Configure Google OAuth in n8n credentials\n2. Create video from audio using create_video.py\n3. Enable the 'Upload to YouTube' node"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "id": "final-output",
             "name": "Final Output",
             "type": "n8n-nodes-base.set",
             "typeVersion": 3.4,
             "position": [
-                1540,
+                1360,
                 300
             ]
         }
@@ -278,25 +263,14 @@
             "main": [
                 [
                     {
-                        "node": "Prepare for Upload",
+                        "node": "Generate Video",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Prepare for Upload": {
-            "main": [
-                [
-                    {
-                        "node": "Upload to YouTube",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Upload to YouTube": {
+        "Generate Video": {
             "main": [
                 [
                     {
@@ -317,9 +291,9 @@
             "name": "AutoTube"
         },
         {
-            "name": "Production"
+            "name": "AI Slideshow"
         }
     ],
     "triggerCount": 0,
-    "versionId": "5"
+    "versionId": "7"
 }
